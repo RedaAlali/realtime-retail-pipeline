@@ -1,0 +1,7 @@
+product_id,product_name,category,base_price
+LAPTOP-001,Ultrabook Pro 13,Electronics,1299.99
+PHONE-001,Smartphone X,Electronics,899.99
+HEADPHONES-001,Noise Cancelling Headphones,Accessories,199.99
+KEYBOARD-001,Mechanical Keyboard,Accessories,129.99
+MOUSE-001,Wireless Mouse,Accessories,49.99
+MONITOR-001,27 inch 4K Monitor,Electronics,399.99

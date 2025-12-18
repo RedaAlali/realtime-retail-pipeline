@@ -1,0 +1,4 @@
+store_id,store_name,city,region,size_sqft
+STORE-001,Downtown Mall,Riyadh,Central,5000
+STORE-002,Westside Plaza,Jeddah,Western,3500
+STORE-003,Tech Hub,Dammam,Eastern,4200

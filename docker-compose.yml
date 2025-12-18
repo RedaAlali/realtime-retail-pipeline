@@ -1,0 +1,104 @@
+version: "3.8"
+
+services:
+  zookeeper:
+    image: bitnamilegacy/zookeeper:3.9.3-debian-12-r22
+    platform: linux/amd64 #for mac
+    container_name: zk
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: bitnamilegacy/kafka:3.7.1-debian-12-r4
+    platform: linux/amd64 #for mac
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "19092:9092"
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=retaildb
+    ports:
+      - "5433:5432"   # host:container
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d
+      - ./db/data:/docker-entrypoint-initdb.d/data
+
+  spark:
+    image: spark:3.5.1-python3
+    container_name: spark
+    depends_on:
+      - kafka
+      - postgres
+    volumes:
+      - ./app/spark:/opt/app/spark
+      - ./spark-checkpoints:/opt/spark-checkpoints
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC=transactions
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/retaildb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - CHECKPOINT_DIR=/opt/spark-checkpoints
+    command: ["/bin/bash", "/opt/app/spark/submit.sh"]
+
+  producer:
+    build:
+      context: ./app/producer
+    container_name: producer
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC=transactions
+      - PRODUCER_SLEEP_SECONDS=1.0
+
+    
+  
+
+
+  ml_service:
+    build:
+      context: ./app/ml_service
+    container_name: ml_service
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=retaildb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - ML_POLL_SECONDS=60
+      - ML_Z_THRESHOLD=3.0
+      - ML_MIN_HISTORY_WINDOWS=5
+
+  dashboard:
+    build:
+      context: ./app/dashboard
+    container_name: dashboard
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=retaildb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "8501:8501"
