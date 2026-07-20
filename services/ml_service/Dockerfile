@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir --upgrade pip
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ml_service.py .
+COPY src/ ./src/
 
-CMD ["python", "-u", "ml_service.py"]
-
+CMD ["python", "-u", "src/main.py"]

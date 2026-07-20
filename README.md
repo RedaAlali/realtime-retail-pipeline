@@ -1,10 +1,36 @@
 # Real-time Retail Analytics Pipeline
 
-A real-time retail analytics platform using **Apache Kafka**, **Spark Structured Streaming**, **PostgreSQL**, and **Streamlit**. Features ML-powered customer segmentation (RFM + K-Means) and product recommendations (Apriori).
+A modern, containerized, real-time retail analytics platform that simulates high-volume retail transactions and refunds, processes them via event streaming and microservice pipelines, analyzes them using machine learning models, and visualizes KPIs in a Streamlit dashboard.
+
+Built using **Apache Kafka**, **Apache Spark Structured Streaming**, **PostgreSQL**, and **Streamlit**.
+
+---
+
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Project Directory Structure](#project-directory-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation & Quick Start](#installation--quick-start)
+  - [Accessing the Dashboard](#accessing-the-dashboard)
+- [Usage & Sample Queries](#usage--sample-queries)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Project Overview
+
+This repository demonstrates an end-to-end real-time data engineering and machine learning pipeline. It handles both streaming transaction feeds (Kafka + Spark) and analytical batches (PostgreSQL) to power live metrics, customer RFM segmentation, and product recommendation features.
 
 ## Architecture
 
-```
+For a deep dive into schemas, tables, and exact data-flow mechanics, check out our [docs/architecture.md](file:///c:/Users/redab/Downloads/CV%20Projects/realtime-retail-pipeline/docs/architecture.md).
+
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │  Batch: product_catalog.csv, store_locations.csv → PostgreSQL
 └─────────────────────────────────────────────────────────────┘
@@ -20,117 +46,141 @@ A real-time retail analytics platform using **Apache Kafka**, **Spark Structured
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Data Sources
+## Features
 
-| Type | Source | Description |
-|------|--------|-------------|
-| Batch | `product_catalog.csv` | 6 products |
-| Batch | `store_locations.csv` | 3 stores |
-| Stream | Kafka `transactions` | Real-time sales |
-| Stream | Kafka `refunds` | ~10% of sales |
+###  Real-time Data Streaming
 
-## Tech Stack
+- **Mock Transaction & Refund Generator**: A Python producer generates continuous transaction payloads and simulated refunds (approx. 10% rate) to independent Kafka topics.
+- **Spark Structured Streaming**: PySpark jobs consume from Kafka, parse and validate JSON schemas, handle watermark-supported late events (5-minute watermark), and write transaction logs to PostgreSQL.
+- **1-Minute Aggregations**: Spark groups and sums transactional revenue metrics into rolling 1-minute tumbling windows.
 
-- **Kafka 3.7.1** + Zookeeper — Event streaming
-- **Spark 3.5.1** — Structured Streaming with 3 concurrent queries
-- **PostgreSQL 15** — Star schema storage
-- **Streamlit** — Real-time dashboard
-- **scikit-learn / mlxtend** — ML (RFM, K-Means, Apriori)
-- **Docker Compose** — Container orchestration
+###  Machine Learning Engine
 
-## Quick Start
+- **Customer RFM Segmentation**: Calculates Recency (days since purchase), Frequency (purchase volume), and Monetary (total spend) metrics to classify shoppers (e.g., Champions, Loyal, Hibernating).
+- **K-Means Clustering**: Clusters customers based on scaled RFM vectors into `N` behavioral segments.
+- **Apriori Association Mining**: Analyzes transaction baskets to identify product pairs frequently bought together, deriving confidence and lift numbers to generate recommendations.
+
+###  Streamlit Frontend Dashboard
+
+- **KPI Metrics**: Real-time Gross Revenue, Refunds, Net Revenue, Transactions, and Customer counts.
+- **Visual Analytics**: Interactive area and pie charts representing sales over time, category percentages, store performance, and transaction volumes.
+- **ML Visualization**: Pie charts representing RFM segments and scatter plots indicating K-Means cluster groupings.
+
+---
+
+## Project Directory Structure
+
+Following software engineering best practices, this repository separates infrastructure configurations, microservice codes, database schemas, and documentation:
+
+```text
+realtime-retail-pipeline/
+├── .github/                       # GitHub templates
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
+│   └── PULL_REQUEST_TEMPLATE.md
+├── docs/                          # In-depth architectural documentation
+│   └── architecture.md
+├── services/                      # Microservices source directory
+│   ├── dashboard/                 # Streamlit UI service
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── src/ (app.py, components.py, utils.py)
+│   ├── ml_service/                # Machine learning daemon
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── src/ (main.py, algorithms.py, database.py)
+│   ├── producer/                  # Kafka event simulator
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── src/ (main.py, generator.py)
+│   └── spark/                     # PySpark structured streaming job
+│       ├── submit.sh
+│       └── src/ (streaming_job.py)
+├── db/                            # PostgreSQL warehouse setup
+│   ├── data/                      # Batch seed files (.csv)
+│   └── init/                      # Schema definition and seeding SQL scripts
+├── .env.example                   # Template environment variables
+├── .gitignore                     # Tech-stack specific gitignore configuration
+├── docker-compose.yml             # Local orchestrator compose file
+├── LICENSE                        # Project MIT License
+├── CONTRIBUTING.md                # Development guides for collaborators
+└── README.md                      # Project documentation (this file)
+```
+
+---
+
+## Getting Started
 
 ### Prerequisites
 
-- Docker Desktop installed and running
-- `docker compose` command available
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+- `docker compose` command line tools configured.
 
-### Running the Project
+### Installation & Quick Start
 
-**macOS / Linux:**
-```bash
-# Build containers
-docker compose build
+1. **Clone the Repository**:
 
-# Make Spark script executable (first time only)
-chmod +x app/spark/submit.sh
+   ```bash
+   git clone https://github.com/RedaAlali/realtime-retail-pipeline.git
+   cd realtime-retail-pipeline
+   ```
 
-# Start all services
-docker compose up
-```
+2. **Configure Environment Variables**:
+   Create a local `.env` file using the configuration template:
 
-**Windows (PowerShell):**
-```powershell
-# Build containers
-docker compose build
+   ```bash
+   cp .env.example .env
+   ```
 
-# Start all services
-docker compose up
-```
+3. **Build the Containers**:
 
-### Access
+   ```bash
+   docker compose build
+   ```
 
-- **Dashboard:** http://localhost:8501
-- **PostgreSQL:** `localhost:5433` (user: `postgres`, db: `retaildb`)
+4. **Launch All Services**:
 
-## Database Schema
+   ```bash
+   docker compose up
+   ```
 
-| Table | Type | Description |
-|-------|------|-------------|
-| `dim_products` | Dimension | Product catalog |
-| `dim_stores` | Dimension | Store locations |
-| `transactions` | Fact | Sales events |
-| `refunds` | Fact | Refund events |
-| `product_metrics_minute` | Aggregate | 1-min windowed metrics |
-| `customer_segments` | ML Output | RFM + K-Means results |
-| `product_associations` | ML Output | Apriori rules |
+To run services in the background, append the `-d` flag: `docker compose up -d`.
 
-## Features
+### Accessing the Dashboard
 
-### Spark Streaming
-- 3 concurrent queries (transactions, aggregations, refunds)
-- 1-minute tumbling windows with 5-minute watermark
-- Checkpointing for exactly-once semantics
+Once the docker containers are active:
 
-### ML Service
-- **Customer Segmentation:** RFM scoring + K-Means clustering
-- **Product Recommendations:** Apriori association rules
+- **Streamlit Dashboard**: [http://localhost:8501](http://localhost:8501)
+- **PostgreSQL Database**: `localhost:5433` (Username: `postgres`, Password: `postgres`, Database: `retaildb`)
 
-### Dashboard
-- Real-time KPIs (Revenue, Refunds, Transactions)
-- Sales analytics by product, category, time
-- Refund analysis by reason
-- Store performance by region
-- Customer segment visualization
-- Product recommendation rules
+---
 
-## Project Structure
+## Usage & Sample Queries
 
-```
-├── app/
-│   ├── dashboard/      # Streamlit app
-│   ├── ml_service/     # RFM, K-Means, Apriori
-│   ├── producer/       # Kafka event generator
-│   └── spark/          # Streaming job
-├── db/
-│   ├── data/           # CSV seed files
-│   └── init/           # SQL schema & seeds
-├── docker-compose.yml
-└── README.md
-```
-
-## Sample Queries
+You can connect directly to PostgreSQL on port `5433` to inspect the warehouse. Here are some useful SQL queries to analyze the data state:
 
 ```sql
--- Recent transactions
+-- Retrieve the latest 10 transactions recorded by Spark
 SELECT * FROM transactions ORDER BY ts DESC LIMIT 10;
 
--- Windowed metrics
+-- Query the 1-minute windowed metrics
 SELECT * FROM product_metrics_minute ORDER BY window_start DESC LIMIT 10;
 
--- Customer segments
+-- Display customer segment sizes
 SELECT rfm_segment, COUNT(*) FROM customer_segments GROUP BY rfm_segment;
 
--- Product associations
-SELECT * FROM product_associations ORDER BY lift DESC;
+-- Retrieve high-lift product recommendations
+SELECT * FROM product_associations ORDER BY lift DESC LIMIT 10;
 ```
+
+---
+
+## Contributing
+
+We welcome contributions! Please review our [CONTRIBUTING.md](file:///c:/Users/redab/Downloads/CV%20Projects/realtime-retail-pipeline/CONTRIBUTING.md) guide before submitting pull requests.
+
+## License
+
+Distributed under the MIT License. See [LICENSE](file:///c:/Users/redab/Downloads/CV%20Projects/realtime-retail-pipeline/LICENSE) for more details.
+

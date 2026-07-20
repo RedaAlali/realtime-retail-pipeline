@@ -45,7 +45,7 @@ services:
       - kafka
       - postgres
     volumes:
-      - ./app/spark:/opt/app/spark
+      - ./services/spark:/opt/app/spark
       - ./spark-checkpoints:/opt/spark-checkpoints
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -58,7 +58,7 @@ services:
 
   producer:
     build:
-      context: ./app/producer
+      context: ./services/producer
     container_name: producer
     depends_on:
       - kafka
@@ -74,7 +74,7 @@ services:
 
   ml_service:
     build:
-      context: ./app/ml_service
+      context: ./services/ml_service
     container_name: ml_service
     depends_on:
       - postgres
@@ -90,7 +90,7 @@ services:
 
   dashboard:
     build:
-      context: ./app/dashboard
+      context: ./services/dashboard
     container_name: dashboard
     depends_on:
       - postgres
